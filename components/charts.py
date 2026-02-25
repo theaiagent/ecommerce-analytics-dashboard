@@ -1,6 +1,7 @@
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+from dash import dash_table
 
 DARK_TEMPLATE = "plotly_dark"
 PAPER_BG = "rgba(0,0,0,0)"
@@ -80,3 +81,36 @@ def create_region_chart(orders: pd.DataFrame) -> go.Figure:
     fig.update_layout(**_base_layout(), title="Revenue by Region")
     fig.update_layout(coloraxis_showscale=False)
     return fig
+
+
+def create_orders_table(orders: pd.DataFrame) -> dash_table.DataTable:
+    """Create an interactive data table for recent orders."""
+    display_cols = ["order_id", "date", "customer_id", "category",
+                    "quantity", "total", "region", "status"]
+    df = orders[display_cols].tail(100).copy()
+    df["date"] = pd.to_datetime(df["date"]).dt.strftime("%Y-%m-%d")
+    df["total"] = df["total"].apply(lambda x: f"${x:,.2f}")
+
+    return dash_table.DataTable(
+        data=df.to_dict("records"),
+        columns=[{"name": col.replace("_", " ").title(), "id": col} for col in display_cols],
+        sort_action="native",
+        filter_action="native",
+        page_size=15,
+        style_header={
+            "backgroundColor": "#1a1c23",
+            "color": "#636EFA",
+            "fontWeight": "600",
+            "border": "1px solid #2a2d35",
+        },
+        style_data={
+            "backgroundColor": "#0f1117",
+            "color": "#c5c6c9",
+            "border": "1px solid #2a2d35",
+        },
+        style_filter={
+            "backgroundColor": "#1a1c23",
+            "color": "#c5c6c9",
+        },
+        style_table={"borderRadius": "12px", "overflow": "hidden"},
+    )
