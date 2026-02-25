@@ -1,0 +1,82 @@
+import plotly.express as px
+import plotly.graph_objects as go
+import pandas as pd
+
+DARK_TEMPLATE = "plotly_dark"
+PAPER_BG = "rgba(0,0,0,0)"
+PLOT_BG = "rgba(26,28,35,1)"
+GRID_COLOR = "rgba(255,255,255,0.05)"
+
+
+def _base_layout() -> dict:
+    return dict(
+        template=DARK_TEMPLATE,
+        paper_bgcolor=PAPER_BG,
+        plot_bgcolor=PLOT_BG,
+        font=dict(color="#c5c6c9"),
+        margin=dict(l=40, r=20, t=40, b=40),
+        xaxis=dict(gridcolor=GRID_COLOR),
+        yaxis=dict(gridcolor=GRID_COLOR),
+    )
+
+
+def create_revenue_chart(orders: pd.DataFrame) -> go.Figure:
+    """Monthly revenue area chart."""
+    df = orders.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    monthly = df.set_index("date").resample("ME")["total"].sum().reset_index()
+    monthly.columns = ["Month", "Revenue"]
+
+    fig = px.area(
+        monthly, x="Month", y="Revenue",
+        color_discrete_sequence=["#636EFA"],
+    )
+    fig.update_layout(**_base_layout(), title="Revenue Over Time")
+    fig.update_traces(
+        fill="tozeroy",
+        fillcolor="rgba(99, 110, 250, 0.15)",
+        line=dict(width=2),
+    )
+    return fig
+
+
+def create_category_chart(orders: pd.DataFrame) -> go.Figure:
+    """Horizontal bar chart of sales by category."""
+    cat_sales = orders.groupby("category")["total"].sum().sort_values()
+
+    fig = px.bar(
+        x=cat_sales.values, y=cat_sales.index,
+        orientation="h",
+        color_discrete_sequence=["#636EFA"],
+    )
+    fig.update_layout(**_base_layout(), title="Sales by Category")
+    fig.update_traces(marker_cornerradius=6)
+    return fig
+
+
+def create_segments_chart(orders: pd.DataFrame, customers: pd.DataFrame) -> go.Figure:
+    """Donut chart of revenue by customer segment."""
+    merged = orders.merge(customers[["customer_id", "segment"]], on="customer_id", how="left")
+    seg_revenue = merged.groupby("segment")["total"].sum().reset_index()
+
+    fig = px.pie(
+        seg_revenue, values="total", names="segment",
+        hole=0.5,
+        color_discrete_sequence=["#636EFA", "#EF553B", "#00CC96"],
+    )
+    fig.update_layout(**_base_layout(), title="Revenue by Customer Segment")
+    return fig
+
+
+def create_region_chart(orders: pd.DataFrame) -> go.Figure:
+    """Treemap of orders by region."""
+    region_data = orders.groupby("region")["total"].sum().reset_index()
+
+    fig = px.treemap(
+        region_data, path=["region"], values="total",
+        color="total",
+        color_continuous_scale="Blues",
+    )
+    fig.update_layout(**_base_layout(), title="Revenue by Region")
+    fig.update_layout(coloraxis_showscale=False)
+    return fig
